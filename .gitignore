@@ -4,12 +4,13 @@
 .env.development.local
 .env.test.local
 .env.production.local
-backend/.env
-frontend/.env
+backend/.env*
+frontend/.env*
 
 # Keep .env.example tracked (exclude it from being ignored)
 !.env.example
 !backend/.env.example
+!frontend/.env.example
 
 # Python virtual environment & cache
 venv/
