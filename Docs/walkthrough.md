@@ -1,16 +1,3 @@
-# PriceMatrix AI - Dynamic Pricing Intelligence Dashboard
-
-PriceMatrix AI is an end-to-end, multi-tenant web application featuring an AI-powered multi-agent pricing engine and human-in-the-loop (HITL) approval workflows. Built to resolve weekly manual repricing inefficiencies for e-commerce stores, it dynamically monitors competitor movements, demand signals, and internal stock limits to calculate optimal margin-compliant adjustments.
-
-### Key Features
-*   **Multi-Tenancy & RBAC**: Strict query isolation preventing data leakage between organizations, offering separate permissions for Workspace Admins and Pricing Analysts.
-*   **Collaborative Multi-Agent Engine**: 5 distinct, specialized AI agents (Market, Demand, Inventory, Strategy, and Compliance) cooperating via a structured orchestrator pipeline.
-*   **Pydantic Data Serialization**: Enforced type-checked prompt outputs for data safety and consistency.
-*   **HITL Safety Rules**: Auto-executes adjustments meeting confidence settings, routing lower confidence prices to a review log with detailed agent rationales.
-*   **Transactional Rollback Resilience**: Guarantees database state rollbacks if external storefront APIs fail during update handshakes.
-
----
-
 # Walkthrough - Dynamic Pricing Intelligence Dashboard
 
 We have completed the full-stack implementation of the **Dynamic Pricing Intelligence Dashboard (Option B)** as defined in the technical assessment. 

@@ -1,0 +1,38 @@
+# Environments (specifically ignore .env files containing secrets)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+backend/.env
+frontend/.env
+
+# Keep .env.example tracked (exclude it from being ignored)
+!.env.example
+!backend/.env.example
+
+# Python virtual environment & cache
+venv/
+backend/venv/
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# SQLite database files
+*.db
+*.db-journal
+
+# Node dependencies and build files
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+dist/
+build/
+out/
+
+# OS files
+.DS_Store
+Thumbs.db
