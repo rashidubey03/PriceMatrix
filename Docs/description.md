@@ -124,3 +124,98 @@ sequenceDiagram
     *   Compares the confidence score against the workspace **Auto-Execute Threshold**:
         *   **High Confidence:** Storefront synchronization is attempted. If successful, updates the database and logs the audit trail under type `AUTO`. If it fails, database changes are rolled back.
         *   **Low Confidence:** Creates a recommendation in `PENDING` status, routing it to the manual queue in the frontend.
+
+---
+
+## 4. File-by-File Code Map & File Call Relationships
+
+To assist in presenting this project, below is an exhaustive breakdown of what each code file does, how they call/import each other, and how user actions flow through the architecture.
+
+### Backend Component Directory (`backend/`)
+The backend is a FastAPI-driven API structured for clean division of concerns:
+
+*   **[server.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/server.py)**
+    *   *Role:* Application entry point. Registers the FastAPI app, configures CORS middlewares to communicate with Next.js, and links routers.
+    *   *Calls:* Automatically executes `Base.metadata.create_all(bind=engine)` upon boot (from `database.py` and `models.py`) to verify tables exist. Imports and registers endpoint sub-routers from the `routers/` folder.
+*   **[database.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/database.py)**
+    *   *Role:* SQLite database manager.
+    *   *Calls:* Generates the SQLAlchemy `engine` pointing to `price_matrix.db` and maps the `SessionLocal` class. Declares `get_db()`, which yields database transaction sessions to all endpoint functions via FastAPI dependency injection.
+*   **[models.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/models.py)**
+    *   *Role:* Relational database schema layout.
+    *   *Calls:* Imports `Base` from `database.py`. Defines tables for `Organization` (multi-tenant containers), `User`, `Configuration`, `Product` (items catalog), `CompetitorPrice`, `DemandSignal`, `Recommendation`, and `PriceChangeAudit`.
+*   **[schemas.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/schemas.py)**
+    *   *Role:* Request/response serialization schemas.
+    *   *Calls:* Utilizes `pydantic` to validate incoming json payloads (e.g., product creation parameters, login information) and serialize database records securely before shipping them to the frontend.
+*   **[auth.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/auth.py)**
+    *   *Role:* Security engine.
+    *   *Calls:* Imports `bcrypt` and `PyJWT` libraries. Exposes helper functions to hash text passwords, verify credentials, and generate JWT tokens. Exposes `get_current_user` middleware which is called by protected API routers to validate JWT tokens in requests.
+*   **[routers/auth.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/routers/auth.py)**
+    *   *Role:* Sign-up and Sign-in API endpoints.
+    *   *Calls:* Calls validation rules in `schemas.py`, user checks in `models.py`, database sessions via `database.py`, and token generation routines in `auth.py`. Auto-provisions the default configurations row for new organizations.
+*   **[routers/products.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/routers/products.py)**
+    *   *Role:* Handles SKU creation, edits, deletion, and search.
+    *   *Calls:* Verifies authentication and user credentials via `auth.py`. Enforces that only Workspace Admins (`ADMIN`) can mutate product listings.
+*   **[routers/recommendations.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/routers/recommendations.py)**
+    *   *Role:* Controls recommendation lists and trigger events.
+    *   *Calls:* When a user triggers analysis, it spins up `PricingOrchestrator` (`services/orchestrator.py`) to run agent pipelines. On manual overrides or reviews, it imports the compliance validator in `services/compliance.py`.
+*   **[services/agents.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/services/agents.py)**
+    *   *Role:* Agent-specific execution rules.
+    *   *Calls:* Imports Llama 3 via `groq` to structure recommendations. Employs built-in mathematical rules to generate outputs if Groq is disconnected.
+*   **[services/orchestrator.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/services/orchestrator.py)**
+    *   *Role:* Drives the multi-agent execution pipeline.
+    *   *Calls:* Instantiates and runs the `MarketIntelligenceAgent`, `DemandForecastingAgent`, `InventoryCostAgent`, and `PricingStrategyAgent` in sequence, handing their outputs down the line.
+*   **[services/compliance.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/services/compliance.py)**
+    *   *Role:* Margin compliance checker and webhook manager.
+    *   *Calls:* Validates computed suggestions against category floors from `models.py`. Syncs approved prices with mock storefront servers and issues commit or rollback instructions.
+*   **[scripts/simulate_data.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/scripts/simulate_data.py)**
+    *   *Role:* Populates database tables with product, competitor, and search history entries.
+    *   *Calls:* Bootstraps database models and populates standard sets of Electronics, Apparel, and Home Goods SKUs.
+
+### Frontend Component Directory (`frontend/`)
+The frontend is a single-page Next.js dashboard configured for client responsiveness:
+
+*   **[src/app/api.ts](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/frontend/src/app/api.ts)**
+    *   *Role:* Dynamic fetch API client layer.
+    *   *Calls:* Loads `process.env.NEXT_PUBLIC_API_URL` to route requests. Automatically injects JWT bearer headers from browser local storage into request calls. Catches `401 Unauthorized` responses from the backend (meaning the session has expired or the database was reseeded), removes expired tokens, and triggers page reloads to redirect the user to the log-in page.
+*   **[src/app/page.tsx](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/frontend/src/app/page.tsx)**
+    *   *Role:* Core Application UI logic.
+    *   *Calls:* Calls helper methods inside `api.ts` to log users in, query products, save configurations, trigger pipelines, and list audit records. Controls role-based component access (e.g. hides add/delete buttons and configuration sliders for analysts).
+*   **[src/app/globals.css](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/frontend/src/app/globals.css)**
+    *   *Role:* Implements custom dark themes, cards, panels, and transition styles.
+
+---
+
+## 5. User Registration & Password Security
+
+When a new user signs up via the frontend form, security and multi-tenancy are handled as follows:
+
+*   **Credentials Storage:** 
+    *   The email address and full name are saved directly in the `users` table of the active SQLite database file.
+    *   **Passwords are never saved in plain text.** 
+    *   Upon registration, the plain-text password is sent to the backend endpoint `/api/auth/register`. 
+    *   The backend imports [auth.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/auth.py) and utilizes the `bcrypt` library. The password is dynamically salted and hashed via the `get_password_hash` helper.
+    *   The secure hash (a string resembling `$2b$12$...`) is written to the `hashed_password` column of the user record.
+*   **Authentication Flow:** 
+    *   During login requests, the plaintext password entered by the user is passed directly to `bcrypt.checkpw(plain_password, hashed_password)`. 
+    *   If valid, a secure JWT access token is minted containing the user ID in its payload (`{"sub": user_id}`). The client stores this token in the browser's `localStorage` and sends it back in subsequent request headers.
+
+---
+
+## 6. SQLite Databases (.db) Files Inventory
+
+This repository contains multiple SQLite database files. Each serves a distinct purpose to maintain testing and development isolation:
+
+*   **[backend/price_matrix.db](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/price_matrix.db)**
+    *   *Purpose:* The **primary database** for the running application. All products, configuration rules, registered organizations, manual audit trails, and recommendations displayed on the dashboard are read and written here.
+*   **[backend/test_price_matrix.db](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/test_price_matrix.db)**
+    *   *Purpose:* Used exclusively by the authentication and multi-tenancy test suite ([test_auth_tenant.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/tests/test_auth_tenant.py)) to ensure live tenant tables remain untouched.
+*   **[backend/test_price_matrix_agents.db](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/test_price_matrix_agents.db)**
+    *   *Purpose:* Used by the agent verification tests ([test_agents.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/tests/test_agents.py)) to run market and pricing forecasts.
+*   **[backend/test_price_matrix_catalog.db](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/test_price_matrix_catalog.db)**
+    *   *Purpose:* Used by catalog CRUD and simulation tests ([test_catalog_sim.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/tests/test_catalog_sim.py)).
+*   **[backend/test_price_matrix_hitl.db](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/test_price_matrix_hitl.db)**
+    *   *Purpose:* Used by compliance check and rollback tests ([test_hitl_compliance.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/tests/test_hitl_compliance.py)).
+
+> [!NOTE]
+> Since we refactored the backend to run directly from within the `backend/` directory, all active databases are now read and written inside the `backend` folder. The duplicate `.db` files at the root level are legacy assets from when the server was ran from the project root. These are now ignored by Git.
+
