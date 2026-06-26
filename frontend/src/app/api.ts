@@ -62,6 +62,12 @@ async function request(endpoint: string, method: string = "GET", body: any = nul
   const data = await response.json();
 
   if (!response.ok) {
+    if (response.status === 401 && !endpoint.includes("/auth/login")) {
+      removeAuthToken();
+      if (typeof window !== "undefined") {
+        window.location.reload();
+      }
+    }
     throw new Error(data.detail || "Something went wrong");
   }
 
