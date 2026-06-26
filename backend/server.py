@@ -1,8 +1,8 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.database import engine, Base
-from backend.routers import auth, products, recommendations
+from database import engine, Base
+from routers import auth, products, recommendations
 
 # Initialize DB tables on startup
 Base.metadata.create_all(bind=engine)
@@ -32,4 +32,4 @@ def read_root():
     return {"message": "Dynamic Pricing Intelligence API is running."}
 
 if __name__ == "__main__":
-    uvicorn.run("backend.server:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("server:app", host="127.0.0.1", port=8000, reload=True)

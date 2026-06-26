@@ -2,8 +2,8 @@ import requests
 from decimal import Decimal
 from typing import List, Tuple
 from sqlalchemy.orm import Session
-from backend.models import Configuration, Product, Recommendation, PriceChangeAudit
-from backend.schemas import PricingStrategyOutput, ExecutionComplianceOutput
+from models import Configuration, Product, Recommendation, PriceChangeAudit
+from schemas import PricingStrategyOutput, ExecutionComplianceOutput
 
 class ExecutionComplianceAgent:
     def __init__(self, db: Session):

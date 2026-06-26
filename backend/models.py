@@ -12,7 +12,7 @@ from sqlalchemy import (
     JSON,
 )
 from sqlalchemy.orm import relationship
-from backend.database import Base
+from database import Base
 
 def generate_uuid():
     return str(uuid.uuid4())

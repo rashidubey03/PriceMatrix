@@ -38,7 +38,7 @@ All backend logic, test files, and frontend layout codes are located in the proj
 *   [services/compliance.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/services/compliance.py): Execution and compliance boundaries router, handling storefront webhooks.
 
 ### 4. Seed Data & Automation Scripts
-*   [simulate_data.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/simulate_data.py): DB seeder. Spawns 12 products across category groups and populates competitor histories and Google Trends demands.
+*   [scripts/simulate_data.py](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/backend/scripts/simulate_data.py): DB seeder. Spawns 12 products across category groups and populates competitor histories and Google Trends demands.
 
 ### 5. Next.js Frontend Dashboard Client
 *   [api.ts](file:///c:/Users/rashi/OneDrive/Desktop/PriceMatrix/frontend/src/app/api.ts): API client wrapper managing request authorizations.
@@ -103,16 +103,13 @@ pip install -r requirements.txt
 ```
 
 ### 2. Start the Backend API
-With the virtual environment activated, navigate back to the **project root folder** to run the seeder and FastAPI server (this allows package imports like `backend.database` to resolve correctly):
+With the virtual environment activated, stay in the `backend` directory to run the database seeder and FastAPI server:
 ```powershell
-# Navigate back to the project root folder
-cd ..
-
 # 1. Populate the database
-python backend/scripts/simulate_data.py
+python scripts/simulate_data.py
 
 # 2. Run the FastAPI development server
-uvicorn backend.server:app --reload
+uvicorn server:app --reload
 ```
 The API documentation will be available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
 

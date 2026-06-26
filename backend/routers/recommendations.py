@@ -3,9 +3,9 @@ from typing import List, Optional
 from decimal import Decimal
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from backend.database import get_db
-from backend.models import Product, Recommendation, PriceChangeAudit, Configuration, User
-from backend.schemas import (
+from database import get_db
+from models import Product, Recommendation, PriceChangeAudit, Configuration, User
+from schemas import (
     RecommendationResponse,
     RecommendationReject,
     RecommendationModify,
@@ -13,9 +13,9 @@ from backend.schemas import (
     ConfigurationUpdate,
     AuditResponse
 )
-from backend.auth import get_current_user, require_role
-from backend.services.orchestrator import PricingOrchestrator
-from backend.services.compliance import ExecutionComplianceAgent
+from auth import get_current_user, require_role
+from services.orchestrator import PricingOrchestrator
+from services.compliance import ExecutionComplianceAgent
 
 router = APIRouter(tags=["Recommendations & Compliance"])
 

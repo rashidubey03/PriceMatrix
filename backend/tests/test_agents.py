@@ -2,15 +2,15 @@ import pytest
 from decimal import Decimal
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from backend.database import Base
-from backend.models import Organization, Configuration, Product, CompetitorPrice, DemandSignal
-from backend.services.agents import (
+from database import Base
+from models import Organization, Configuration, Product, CompetitorPrice, DemandSignal
+from services.agents import (
     MarketIntelligenceAgent,
     DemandForecastingAgent,
     InventoryCostAgent,
     PricingStrategyAgent
 )
-from backend.services.orchestrator import PricingOrchestrator
+from services.orchestrator import PricingOrchestrator
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_price_matrix_agents.db"
 

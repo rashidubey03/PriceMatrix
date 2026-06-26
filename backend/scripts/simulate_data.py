@@ -4,11 +4,11 @@ import random
 from decimal import Decimal
 from datetime import datetime, timedelta
 
-# Ensure project root directory is in sys.path
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+# Ensure backend directory is in sys.path
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.database import SessionLocal, engine, Base
-from backend.models import (
+from database import SessionLocal, engine, Base
+from models import (
     Organization,
     User,
     Configuration,
@@ -16,7 +16,7 @@ from backend.models import (
     CompetitorPrice,
     DemandSignal,
 )
-from backend.auth import get_password_hash
+from auth import get_password_hash
 
 # Sample Products list
 SEED_PRODUCTS = [

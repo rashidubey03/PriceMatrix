@@ -4,9 +4,9 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from backend.database import Base, get_db
-from backend.server import app
-from backend.models import Organization, User, Product, Recommendation, PriceChangeAudit, Configuration
+from database import Base, get_db
+from server import app
+from models import Organization, User, Product, Recommendation, PriceChangeAudit, Configuration
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test_price_matrix_hitl.db"
 

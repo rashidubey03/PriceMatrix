@@ -5,8 +5,8 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
-from backend.database import get_db
-from backend.models import User
+from database import get_db
+from models import User
 import bcrypt
 
 # Configuration

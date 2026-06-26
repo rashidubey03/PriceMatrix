@@ -12,8 +12,8 @@ except ImportError:
     groq = None
     Groq = None
 
-from backend.models import Product, CompetitorPrice, DemandSignal, Configuration
-from backend.schemas import (
+from models import Product, CompetitorPrice, DemandSignal, Configuration
+from schemas import (
     CompetitorMetric,
     MarketIntelligenceOutput,
     DemandForecastingOutput,

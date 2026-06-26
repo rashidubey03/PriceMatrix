@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
-from backend.models import Product
-from backend.schemas import PricingStrategyOutput
-from backend.services.agents import (
+from models import Product
+from schemas import PricingStrategyOutput
+from services.agents import (
     MarketIntelligenceAgent,
     DemandForecastingAgent,
     InventoryCostAgent,
