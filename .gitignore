@@ -37,3 +37,7 @@ out/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Documentation
+Docs/PRD.md
+Docs/IMPLEMENTATION_PLAN.md
