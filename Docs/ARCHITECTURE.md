@@ -13,7 +13,7 @@ The system leverages a **Multi-Agent AI Pipeline** to evaluate products and sugg
 ```mermaid
 graph TD
     %% Frontend Client Layer
-    subgraph Client Layer (Next.js SPA)
+    subgraph ClientLayer ["Client Layer (Next.js SPA)"]
         UI[page.tsx Dashboard UI]
         APIClient[api.ts Fetch client]
         Storage[(Browser LocalStorage)]
@@ -22,7 +22,7 @@ graph TD
     end
 
     %% Backend Server Gateway
-    subgraph Application Server (FastAPI)
+    subgraph ApplicationServer ["Application Server (FastAPI)"]
         RouteAuth[routers/auth.py]
         RouteProd[routers/products.py]
         RouteRec[routers/recommendations.py]
@@ -35,7 +35,7 @@ graph TD
     end
 
     %% Core Application Orchestrator & Services
-    subgraph AI & Compliance Engine
+    subgraph AIComplianceEngine ["AI & Compliance Engine"]
         Orch[services/orchestrator.py]
         Agents[services/agents.py Multi-Agents]
         Comp[services/compliance.py Compliance Guard]
@@ -47,19 +47,21 @@ graph TD
     end
 
     %% Database & External Integrations
-    subgraph Integrations & Persistence
+    subgraph IntegrationsPersistence ["Integrations & Persistence"]
         DB[(SQLAlchemy / price_matrix.db)]
         Storefront[Mock Storefront Sync Endpoint]
         
-        RouteAuth & RouteProd & RouteRec -->|SQL Query| DB
+        RouteAuth -->|SQL Query| DB
+        RouteProd -->|SQL Query| DB
+        RouteRec -->|SQL Query| DB
         Comp -->|Query org configs & save| DB
         Comp -->|Storefront PUT Sync| Storefront
     end
     
-    style Client Layer fill:#f9f,stroke:#333,stroke-width:2px
-    style Application Server fill:#bbf,stroke:#333,stroke-width:2px
-    style AI & Compliance Engine fill:#dfd,stroke:#333,stroke-width:2px
-    style Integrations & Persistence fill:#fdd,stroke:#333,stroke-width:2px
+    style ClientLayer fill:#f9f,stroke:#333,stroke-width:2px
+    style ApplicationServer fill:#bbf,stroke:#333,stroke-width:2px
+    style AIComplianceEngine fill:#dfd,stroke:#333,stroke-width:2px
+    style IntegrationsPersistence fill:#fdd,stroke:#333,stroke-width:2px
 ```
 
 ---
