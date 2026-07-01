@@ -127,7 +127,105 @@ sequenceDiagram
 
 ---
 
-## 4. File-by-File Code Map & File Call Relationships
+## 4. Stepwise Interaction Workflow & Backend Logic
+
+This section outlines the precise backend mathematical operations, endpoint routes, trigger events, and database actions initiated when users click UI controls on the dashboard.
+
+### 1. "Sign Up" / "Register Workspace" Button
+*   **User Action:** Clicked on the signup screen to create a new company workspace organization. Requires Email, Password, Name, and Organization Name.
+*   **Backend Route:** `POST /api/auth/register` (unauthenticated).
+*   **Backend Logic Flow:**
+    1.  Validates that either `org_id` or `org_name` is passed.
+    2.  Verifies the email does not already exist in the `users` table.
+    3.  Salts and hashes the password using `bcrypt` via `get_password_hash` in `auth.py`.
+    4.  Registers a new `Organization` record in the database.
+    5.  **Auto-Provisions Configuration:** Automatically inserts a default `Configuration` settings row for the new organization workspace:
+        *   **Auto-Execution Confidence Threshold:** `85%` (`0.85`)
+        *   **Category Margin Floors:** Electronics (`10%`), Apparel (`25%`), Home Goods (`15%`)
+    6.  Inserts the new `User` record containing the hashed password and organization association.
+    7.  Generates a cryptographically signed JWT access token containing the user ID subject `{"sub": user_id}`.
+    8.  Returns the JWT token and user profile metadata to the client browser, which saves them in `localStorage`.
+
+### 2. "Sign In" Button
+*   **User Action:** Clicked to log in to an existing workspace. Requires Email and Password.
+*   **Backend Route:** `POST /api/auth/login` (unauthenticated).
+*   **Backend Logic Flow:**
+    1.  Performs a query filter on the `users` table for the matching email.
+    2.  Validates the plaintext password against the stored database hash using `bcrypt.checkpw(plain_password, hashed_password)`. If invalid, raises `HTTP 401 Unauthorized`.
+    3.  Generates a signed JWT access token and returns it to the client.
+    4.  The browser client stores the token under the key `token` and user parameters under `user` in `localStorage`.
+
+### 3. "Trigger AI Analysis" Button
+*   **User Action:** Clicked in the SKU catalog table to compute pricing recommendations for a specific product.
+*   **Backend Route:** `POST /api/recommendations/analyze/{product_id}` (guarded by JWT user verification).
+*   **Backend Logic Flow:**
+    1.  The middleware extracts the token, confirms signature validity, and injects the caller's `org_id`.
+    2.  Exposes database records: fetches the target `Product` SKU.
+    3.  **Launches Agent Pipeline:** Instantiates `PricingOrchestrator` to coordinate agent analysis:
+        *   **Market Intelligence Agent:** Calculates the average competitor price $P_{competitor}$ for that product:
+            $$P_{competitor} = \frac{1}{N} \sum_{i=1}^{N} P_{competitor\_i}$$
+        *   **Demand Forecasting Agent:** Checks category demand signals (seasonality indexes and search trends velocity).
+        *   **Inventory Cost Agent:** Identifies holding costs based on inventory counts (Critically Low if stock $\le 10$, Overstocked if stock $> 100$).
+        *   **Pricing Strategy Synthesizer:** Sends agent details to Groq (Llama 3 8B) to compute optimal price $P_{suggested}$, confidence score $C$ (between `0.0` and `1.0`), and detailed rationale logs. (Employs a mathematical model fallback if API errors or formatting glitches occur).
+    4.  **Executes Compliance Boundary Rules:** Checks if the suggested price breaches organization category safety floors.
+        *   Calculates the minimum permissible price ($P_{floor}$):
+            $$P_{floor} = \frac{\text{COGS}}{1 - \text{Margin Floor}}$$
+            *(where the `Margin Floor` percentage is obtained from the organization's configuration row, defaulting to the product's individual threshold if not specified).*
+        *   **Capping Constraint:** If $P_{suggested} < P_{floor}$, the compliance guard constraints and forces the recommendation price to the margin floor:
+            $$P_{recommended} = \max(P_{suggested}, P_{floor})$$
+            and logs a compliance alert in the recommendations rationale block.
+    5.  **Routes Recommendation based on Auto-Execute Check:**
+        *   Retrieves the workspace auto-execution confidence threshold ($T_{auto}$, e.g. `0.85`).
+        *   **Auto-Execute Action ($C \ge T_{auto}$):**
+            1.  Sets status to `AUTO_EXECUTED`.
+            2.  Invokes mock Storefront API sync (PUT update).
+            3.  **On storefront success:** Commits state updates in a database transaction block. Updates product's `current_price` to $P_{recommended}$, writes the recommendation to the database, and adds a `PriceChangeAudit` timeline record of type `AUTO` (assigned to system).
+            4.  **On storefront failure:** Aborts the execution pipeline, rolls back staged DB transactions, and returns `HTTP 424 Failed Dependency`.
+        *   **Manual Review Action ($C < T_{auto}$):**
+            1.  Sets status to `PENDING`.
+            2.  Saves the recommendation record to the database queue without modifying the product catalog or sync keys, and alerts the frontend.
+
+### 4. "Approve Recommendation" Button
+*   **User Action:** Clicked inside the details drawer of a pending recommendation to accept the suggested price.
+*   **Backend Route:** `POST /api/recommendations/{id}/approve` (guarded by JWT verification).
+*   **Backend Logic Flow:**
+    1.  Retrieves the pending recommendation and checks that it belongs to the caller's organization.
+    2.  Opens an atomic database transaction context block: `with db.begin():`
+    3.  Triggers a mock storefront API synchronization call.
+    4.  **Transactional Commit / Rollback:**
+        *   *If sync is successful:* Marks recommendation status as `APPROVED`, writes the new price to the target product catalog row, records a `PriceChangeAudit` log marked as `APPROVED` detailing old price, new price, and the reviewer's User ID, and commits the transaction.
+        *   *If sync fails:* Throws an error, rolling back all database modifications to prevent database-to-storefront catalog discrepancies.
+
+### 5. "Reject Recommendation" Button
+*   **User Action:** Clicked inside the details drawer of a pending recommendation to decline the suggestion. Requires typing a rejection reason.
+*   **Backend Route:** `POST /api/recommendations/{id}/reject` (guarded by JWT verification).
+*   **Backend Logic Flow:**
+    1.  Sets the recommendation status to `REJECTED`.
+    2.  Saves the written explanation text to the `rejection_reason` column in the database.
+    3.  *Note:* The catalog price remains unchanged and no storefront webhook sync is triggered.
+
+### 6. "Manual Override Price" Button
+*   **User Action:** Clicked inside the details drawer of a pending recommendation to input a custom price.
+*   **Backend Route:** `POST /api/recommendations/{id}/modify` (guarded by JWT verification).
+*   **Backend Logic Flow:**
+    1.  Validates that the custom price ($P_{override}$) meets or exceeds the category safety floor ($P_{floor}$):
+        $$P_{override} \ge P_{floor}$$
+        If the price breaches the floor, raises `HTTP 400 Bad Request` and stops execution.
+    2.  Opens an atomic database transaction block.
+    3.  Triggers mock storefront API sync for the overridden price.
+    4.  **Staging and Commit:** On sync success, updates recommendation status to `APPROVED`, updates catalog product `current_price` to $P_{override}$, writes a `PriceChangeAudit` log of type `MANUAL_OVERRIDE` containing the overriding user's ID, and commits the transaction.
+
+### 7. "Save Configuration" Button
+*   **User Action:** Clicked by an administrator on the settings tab to update auto-execution thresholds or category margin floors.
+*   **Backend Route:** `PUT /api/config` (Guarded by JWT verification + Workspace Admin role restriction).
+*   **Backend Logic Flow:**
+    1.  Filters and fetches the configuration record for the admin's organization.
+    2.  Applies configuration updates (ensuring value constraints: confidence slider $0.50 \le C \le 0.95$, margin limits $0.0 \le M \le 0.90$).
+    3.  Saves and commits updates to the database.
+
+---
+
+## 5. File-by-File Code Map & File Call Relationships
 
 To assist in presenting this project, below is an exhaustive breakdown of what each code file does, how they call/import each other, and how user actions flow through the architecture.
 
@@ -185,7 +283,7 @@ The frontend is a single-page Next.js dashboard configured for client responsive
 
 ---
 
-## 5. User Registration & Password Security
+## 6. User Registration & Password Security
 
 When a new user signs up via the frontend form, security and multi-tenancy are handled as follows:
 
@@ -201,7 +299,7 @@ When a new user signs up via the frontend form, security and multi-tenancy are h
 
 ---
 
-## 6. SQLite Databases (.db) Files Inventory
+## 7. SQLite Databases (.db) Files Inventory
 
 This repository contains multiple SQLite database files. Each serves a distinct purpose to maintain testing and development isolation:
 
