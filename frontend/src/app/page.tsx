@@ -840,7 +840,9 @@ export default function Home() {
                 <thead>
                   <tr>
                     <th>Timestamp</th>
-                    <th>Product ID / SKU</th>
+                    <th>Product Name</th>
+                    <th>Product ID</th>
+                    <th>SKU</th>
                     <th>Old Price</th>
                     <th>New Price</th>
                     <th>Type</th>
@@ -851,7 +853,9 @@ export default function Home() {
                   {audits.map(a => (
                     <tr key={a.id}>
                       <td>{new Date(a.changed_at).toLocaleString()}</td>
-                      <td style={{ fontWeight: 600 }}>{a.product_id}</td>
+                      <td style={{ fontWeight: 500 }}>{a.product_name || "N/A"}</td>
+                      <td style={{ fontSize: "0.8rem", color: "var(--text-secondary)", fontFamily: "monospace" }}>{a.product_id}</td>
+                      <td style={{ fontWeight: 600 }}>{a.product_sku || "N/A"}</td>
                       <td>{formatCurrency(a.old_price)}</td>
                       <td style={{ color: parseFloat(a.new_price) > parseFloat(a.old_price) ? "var(--status-success)" : "var(--status-danger)", fontWeight: 600 }}>
                         {formatCurrency(a.new_price)}
@@ -861,7 +865,7 @@ export default function Home() {
                           {a.change_type}
                         </span>
                       </td>
-                      <td style={{ color: "var(--text-secondary)", fontSize: "0.8rem" }}>{a.changed_by || "SYSTEM (Auto-Executed)"}</td>
+                      <td style={{ color: "var(--text-secondary)", fontSize: "0.8rem" }}>{a.changed_by}</td>
                     </tr>
                   ))}
                 </tbody>

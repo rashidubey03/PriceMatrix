@@ -336,6 +336,28 @@ def list_audits(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    return db.query(PriceChangeAudit).filter(
+    audits = db.query(PriceChangeAudit).filter(
         PriceChangeAudit.org_id == current_user.org_id
     ).order_by(PriceChangeAudit.changed_at.desc()).all()
+    
+    res = []
+    for a in audits:
+        user_email = None
+        if a.user:
+            user_email = a.user.email
+            
+        res.append({
+            "id": a.id,
+            "org_id": a.org_id,
+            "product_id": a.product_id,
+            "product_name": a.product.name if a.product else "Deleted Product",
+            "product_sku": a.product.sku if a.product else "N/A",
+            "recommendation_id": a.recommendation_id,
+            "old_price": a.old_price,
+            "new_price": a.new_price,
+            "changed_by": user_email if user_email else (a.changed_by or "SYSTEM (Auto-Executed)"),
+            "changed_by_email": user_email,
+            "change_type": a.change_type,
+            "changed_at": a.changed_at
+        })
+    return res

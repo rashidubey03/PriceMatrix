@@ -138,10 +138,13 @@ class AuditResponse(BaseModel):
     id: str
     org_id: str
     product_id: str
+    product_name: Optional[str] = None
+    product_sku: Optional[str] = None
     recommendation_id: Optional[str] = None
     old_price: Decimal
     new_price: Decimal
     changed_by: Optional[str] = None
+    changed_by_email: Optional[str] = None
     change_type: str
     changed_at: datetime
 
